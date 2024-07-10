@@ -23,4 +23,12 @@ contract("My Token", (accounts) => {
       assert.equal(name, "My Token");
     });
   });
+
+  describe("token distribution", async () => {
+    let result;
+
+    it("mint tokens", async () => {
+      await token.mint(accounts[0], '')
+    });
+  });
 });

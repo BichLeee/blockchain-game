@@ -1,3 +1,5 @@
+const { version } = require("chai");
+
 require("babel-register");
 require("babel-polyfill");
 
@@ -17,6 +19,7 @@ module.exports = {
         enabled: true,
         runs: 200,
       },
+      version: "0.8.1",
     },
   },
 };

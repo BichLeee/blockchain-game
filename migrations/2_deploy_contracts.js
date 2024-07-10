@@ -1,5 +1,5 @@
-const Token = artifacts.require("MyToken");
+const BettingGame = artifacts.require("BettingGame");
 
 module.exports = function (deployer) {
-  deployer.deploy(Token);
+  deployer.deploy(BettingGame);
 };
