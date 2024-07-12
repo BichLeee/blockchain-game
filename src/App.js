@@ -1,8 +1,18 @@
-// App.js
 import React, { useState, useEffect } from "react";
+import {
+  Button,
+  Container,
+  Modal,
+  InputGroup,
+  Navbar,
+  Form,
+} from "react-bootstrap";
 import Web3 from "web3";
+import { BigInt } from "global";
+
 import BettingGame from "./abis/BettingGame.json";
-import { BigInt } from 'global';
+
+import "./App.css";
 
 function App() {
   const [web3, setWeb3] = useState(null);
@@ -11,6 +21,9 @@ function App() {
   const [betAmount, setBetAmount] = useState(0);
   const [betId, setBetId] = useState(null);
   const [betResult, setBetResult] = useState(null);
+  const [isBetting, setIsBetting] = useState(null);
+
+  const [showAlert, setShowAlert] = useState(false);
 
   console.log(accounts);
 
@@ -36,14 +49,20 @@ function App() {
     loadWeb3();
   }, []);
 
-  const placeBet = async (isHead) => {
-    if (contract && accounts.length > 0) {
-      await contract.methods.placeBet(isHead).send({
-        from: accounts[0],
-        value: web3.utils.toWei(betAmount, "ether"),
-      });
-      const currentBetId = await contract.methods.betId().call();
-      setBetId(BigInt(currentBetId) - BigInt(1));
+  const placeBet = async (isPig) => {
+    try {
+      if (contract && accounts.length > 0) {
+        await contract.methods.placeBet(isPig).send({
+          from: accounts[0],
+          value: web3.utils.toWei(betAmount, "ether"),
+        });
+        const currentBetId = await contract.methods.betId().call();
+        setBetId(BigInt(currentBetId) - BigInt(1));
+      }
+    } catch (err) {
+      //denied transaction signature
+      console.log(err);
+      setIsBetting(null);
     }
   };
 
@@ -51,38 +70,112 @@ function App() {
     try {
       if (contract && accounts.length > 0 && betId !== null) {
         await contract.methods.resolveBet(betId).send({ from: accounts[0] });
-        const betResultEvent = await contract.getPastEvents("BetResult", {
-          filter: { betId: betId },
-          fromBlock: "latest",
-        });
-        setBetResult(betResultEvent[0].returnValues);
+        contract
+          .getPastEvents("BetResult", {
+            filter: { betId: betId },
+            fromBlock: "latest",
+          })
+          .then((betResultEvent) => {
+            console.log(betResultEvent);
+            setBetResult(betResultEvent[0].returnValues);
+            setShowAlert(true);
+          })
+          .catch((err) => console.log(err));
       }
     } catch (err) {
       console.log(err);
+    } finally {
+      setIsBetting(null);
     }
   };
 
-  return (
-    <div>
-      <h1>Coin Flip Betting Game</h1>
-      <input
-        type="number"
-        value={betAmount}
-        onChange={(e) => setBetAmount(e.target.value)}
-        placeholder="Bet amount in Ether"
-      />
-      <button onClick={() => placeBet(true)}>Bet on Heads</button>
-      <button onClick={() => placeBet(false)}>Bet on Tails</button>
-      <button onClick={resolveBet}>Resolve Bet</button>
+  const handleBetting = (isPig) => {
+    setIsBetting(isPig);
+    placeBet(isPig);
+  };
 
-      {betResult && (
-        <div>
-          <h2>Bet Result</h2>
-          <p>Player: {betResult.player}</p>
-          <p>Amount: {web3.utils.fromWei(betResult.amount, "ether")} Ether</p>
-          <p>Win: {betResult.win ? "Yes" : "No"}</p>
+  return (
+    <div className="App">
+      <Navbar>
+        <Container>
+          <Navbar.Brand href="#home">Betting Game</Navbar.Brand>
+          <div className="account">{accounts[0]}</div>
+        </Container>
+      </Navbar>
+      <Container style={{ paddingTop: "20px" }}>
+        <img src="./coin.gif" style={{ maxWidth: "300px" }} />
+
+        <div style={{ textAlign: "-webkit-center", marginBottom: "30px" }}>
+          <InputGroup className="amount">
+            <Form.Control
+              value={betAmount}
+              onChange={(e) => setBetAmount(e.target.value)}
+              type="number"
+              step={0.1}
+              placeholder="Bet amount"
+            />
+            <InputGroup.Text>ETH</InputGroup.Text>
+          </InputGroup>
         </div>
-      )}
+        <h6 style={{ color: "white", fontWeight: "normal" }}>
+          You will bet on ...
+        </h6>
+        <Button
+          className={`bet-button ${isBetting === true ? "choosing" : ""}`}
+          variant="light"
+          onClick={() => handleBetting(true)}
+          disabled={isBetting !== null}
+        >
+          <span>🐷</span> <br />
+          Pig
+        </Button>
+        <Button
+          className={`bet-button ${isBetting === false ? "choosing" : ""}`}
+          variant="light"
+          onClick={() => handleBetting(false)}
+          disabled={isBetting !== null}
+        >
+          <span>🍦</span> <br />
+          Ice cream
+        </Button>
+        <div style={{ marginTop: "50px" }}>
+          <Button
+            variant="warning"
+            onClick={resolveBet}
+            disabled={isBetting === null}
+          >
+            Resolve Bet
+          </Button>
+        </div>
+        <Modal
+          size="sm"
+          show={showAlert}
+          centered
+          onHide={() => setShowAlert(false)}
+        >
+          <Modal.Header closeButton>
+            <Modal.Title id="contained-modal-title-vcenter">
+              Bet Result
+            </Modal.Title>
+          </Modal.Header>
+          {betResult && (
+            <Modal.Body
+              style={{
+                textAlign: "center",
+                minHeight: "100px",
+                marginTop: "20px",
+              }}
+            >
+              <h5>{betResult.win ? "Win 🎆" : "Lose 🥺"}</h5>
+              <p>
+                {betResult.win
+                  ? `${web3.utils.fromWei(betResult.amount, "ether")}  ETH`
+                  : ""}
+              </p>
+            </Modal.Body>
+          )}
+        </Modal>
+      </Container>
     </div>
   );
 }
