@@ -55,10 +55,7 @@ contract BettingGame is ERC721 {
         bool win = (bet.isHead == outcome);
         uint256 payout = win ? bet.amount * 2 : 0;
 
-        if (win) {
-            payable(bet.player).transfer(payout);
-
-            emit BetResult(bet.player, payout, win, _betId);
-        }
+        payable(bet.player).transfer(payout);
+        emit BetResult(bet.player, payout, win, _betId);
     }
 }
