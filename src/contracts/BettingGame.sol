@@ -49,8 +49,14 @@ contract BettingGame is ERC721 {
 
         require(msg.sender == bet.player, "Not authorized");
 
-        // Random outcome (simple pseudo-randomness for demonstration)
-        bool outcome = block.timestamp % 2 == 0;
+        // Get the block hash of the previous block
+        bytes32 blockHash = blockhash(block.number - 1);
+
+        // Extract the first 5 bytes (10 hex characters) of the block hash
+        uint40 firstFiveBytes = uint40(uint256(blockHash) >> (256 - 40));
+
+        // Generate a random value using the extracted bytes
+        bool outcome = firstFiveBytes % 2 == 0;
 
         bool win = (bet.isHead == outcome);
         uint256 payout = win ? bet.amount * 2 : 0;
